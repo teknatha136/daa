@@ -1,0 +1,114 @@
+{{- range $name, $deployment := .Values.deployments }}
+{{- if $deployment.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- $deploymentName := "" }}
+  {{- if $deployment.name }}
+    {{- $deploymentName = printf "%s-%s" $.Release.Name $deployment.name }}
+  {{- else }}
+    {{- $deploymentName = include "app.deploymentName" (list $ $name) }}
+  {{- end }}
+  name: {{ $deploymentName }}
+  labels:
+    {{- include "app.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+    {{- if and (hasKey $deployment "labels") $deployment.labels }}
+    {{- toYaml $deployment.labels | nindent 4 }}
+    {{- end }}
+  {{- with $.Values.global.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not (and (hasKey $deployment "autoscaling") $deployment.autoscaling (hasKey $deployment.autoscaling "enabled") $deployment.autoscaling.enabled) }}
+  replicas: {{ $deployment.replicaCount | default 1 }}
+  {{- end }}
+  {{- with $deployment.deploymentStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- else }}
+  strategy:
+    {{- toYaml $.Values.global.deploymentStrategy | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "app.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "app.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+        {{- with $deployment.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $deployment.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if and (hasKey $.Values.global "imagePullSecrets") $.Values.global.imagePullSecrets (hasKey $.Values.global.imagePullSecrets "enabled") $.Values.global.imagePullSecrets.enabled }}
+      imagePullSecrets:
+        {{- toYaml $.Values.global.imagePullSecrets.secrets | nindent 8 }}
+      {{- end }}
+      {{- with $deployment.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ $deployment.image.repoTag }}"
+          imagePullPolicy: {{ $deployment.image.pullPolicy }}
+          {{- with $deployment.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $deployment.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $deployment.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $deployment.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $deployment.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $deployment.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if (hasKey $deployment "livenessProbe") }}
+          {{- with $deployment.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- if (hasKey $deployment "readinessProbe") }}
+          {{- with $deployment.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- if and (hasKey $deployment "startupProbe") $deployment.startupProbe (hasKey $deployment.startupProbe "enabled") $deployment.startupProbe.enabled }}
+          {{- with $deployment.startupProbe }}
+          startupProbe:
+            {{- toYaml (omit . "enabled") | nindent 12 }}
+          {{- end }}
+          {{- end }}
+        {{- with $deployment.additionalContainers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $deployment.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,31 @@
+apiVersion: v2
+name: daa
+description: Helm chart that can deploy some common applications
+
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates.
+version: 0.4.0
+
+# This is the version number of the application being deployed. This is supposed to be increased when application version changes its @teknatha136's opinion to ignore this and treat this char as application increase this in sync with version.
+# Applications will have their own versioning.
+appVersion: "0.4.0"
+
+# Keywords that describe this chart
+keywords:
+  - microservices
+  - multi-container
+  - kubernetes
+
+home: https://github.com/SELISEdigitalplatforms/daa
+
+sources:
+  - https://github.com/SELISEdigitalplatforms/daa
+
+maintainers:
+  - name: Tek Nath Acharya
+    url: https://github.com/teknatha136
+
+# Dependencies on other charts
+dependencies: []

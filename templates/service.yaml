@@ -1,0 +1,34 @@
+{{- range $name, $deployment := .Values.deployments }}
+{{- if and $deployment.enabled (hasKey $deployment "service") $deployment.service (hasKey $deployment.service "enabled") $deployment.service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  {{- $serviceName := "" }}
+  {{- if $deployment.service.name }}
+    {{- $serviceName = printf "%s-%s" $.Release.Name $deployment.service.name }}
+  {{- else }}
+    {{- $serviceName = include "app.serviceName" (list $ $name) }}
+  {{- end }}
+  name: {{ $serviceName }}
+  labels:
+    {{- include "app.labels" $ | nindent 4 }}
+    {{- with $deployment.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $deployment.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $deployment.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ $deployment.service.port }}
+      targetPort: {{ $deployment.service.targetPort | default $deployment.service.port }}
+      protocol: TCP
+      name: {{ $deployment.service.portName | default "http" }}
+  selector:
+    {{- include "app.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+{{- end }}
+{{- end }}

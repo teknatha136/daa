@@ -1,0 +1,485 @@
+# -- Global configuration that applies across all resources
+global:
+  # -- Common labels to be added to all resources
+  labels: {}
+    # app.kubernetes.io/part-of: application-suite
+    # environment: dev
+  
+  # -- Common annotations to be added to all resources
+  annotations: {}
+    # prometheus.io/scrape: "true"
+  
+  # -- Image pull secrets configuration
+  imagePullSecrets:
+    # -- Enable or disable the use of image pull secrets
+    enabled: false
+    # -- List of image pull secret names
+    secrets: []
+      # - name: regcred
+  
+  # -- Global deployment strategy - applied to all deployments unless overridden
+  deploymentStrategy:
+    # -- Deployment strategy type RollingUpdate
+    type: RollingUpdate
+    # -- Rolling update configuration
+    rollingUpdate:
+      # -- Maximum number or percentage of pods that can be created above desired during update
+      maxSurge: 1
+      # -- Maximum number or percentage of pods that can be unavailable during update
+      maxUnavailable: 0
+
+# -- Common configuration for all deployments
+# These will be applied to all deployments unless overridden at the deployment level
+common:
+  # -- Common ConfigMap settings for all deployments
+  configMap:
+    # -- Enable creating a common ConfigMap for all deployments
+    enabled: false
+    # -- Common ConfigMap name - will always be prefixed with release name
+    # -- For example, if name: "common" and releaseName: "myapp", the ConfigMap will be named "myapp-common"
+    # -- Update name to have expected name. Example: "name: myapp" and Release Name "myapp" will produce "myapp-myapp"
+    name: "common"
+    # -- Labels to apply to the common ConfigMap
+    labels: {}
+    # -- Annotations to apply to the common ConfigMap
+    annotations: {}
+    # -- Data to be included in the common ConfigMap
+    data: {}
+    # Examples:
+    # global-settings.json: |
+    #   {
+    #     "environment": "production",
+    #     "logging": "info"
+    #   }
+
+  # -- Common Secret settings for all deployments
+  secret:
+    # -- Enable creating a common Secret for all deployments
+    enabled: false
+    # -- Common Secret name - will always be prefixed with release name
+    # -- For example, if name: "common" and releaseName: "myapp", the Secret will be named "myapp-common"
+    # -- Update name to have expected name. Example: "name: myapp" and Release Name "myapp" will produce "myapp-myapp"
+    name: "common"
+    # -- Secret type (defaults to Opaque)
+    type: Opaque
+    # -- Labels to apply to the common Secret
+    labels: {}
+    # -- Annotations to apply to the common Secret
+    annotations: {}
+    # -- Data to be included in the Secret (automatically base64 encoded)
+    data: {}
+    # Examples:
+    # shared-api-key: my-api-key
+    
+    # -- StringData for the Secret (not base64 encoded)
+    stringData: {}
+
+# -- Extra ConfigMap configurations (not directly tied to deployments)
+extraConfigMaps:
+  # -- Example standalone ConfigMap
+  example-config:
+    # -- Enable or disable this ConfigMap
+    enabled: false
+    # -- ConfigMap name - will always be prefixed with release name
+    # -- For example, if name: "config" and releaseName: "myapp", the ConfigMap will be named "myapp-config"
+    # -- If name is not specified it will take the key (example-config) prefixed with release name
+    name: ""
+    # -- Labels to apply to the ConfigMap
+    labels: {}
+    # -- Annotations to apply to the ConfigMap
+    annotations: {}
+    # -- Data to be included in the ConfigMap
+    data: {}
+    # Examples:
+    # config.json: |
+    #   {
+    #     "key": "value",
+    #     "log-level": "info"
+    #   }
+    # settings.conf: |
+    #   listen=8080
+    #   timeout=60
+
+# -- Extra Secret configurations (not directly tied to deployments)
+extraSecrets:
+  # -- Example standalone Secret
+  example-secret:
+    # -- Enable or disable this Secret
+    enabled: false
+    # -- Secret name - will always be prefixed with release name
+    # -- For example, if name: "secret" and releaseName: "myapp", the Secret will be named "myapp-secret"
+    # -- If name is not specified it will take the key (example-secret) prefixed with release name
+    name: ""
+    # -- Secret type (defaults to Opaque)
+    type: Opaque
+    # -- Labels to apply to the Secret
+    labels: {}
+    # -- Annotations to apply to the Secret
+    annotations: {}
+    # -- Data to be included in the Secret (automatically base64 encoded)
+    data: {}
+    # Examples:
+    # api-key: my-api-key
+    # db-password: password123
+    
+    # -- StringData for the Secret (not base64 encoded)
+    stringData: {}
+    # Examples:
+    # api-key: my-api-key
+    # db-password: password123
+
+# -- Extra Ingress configurations (not directly tied to deployments)
+# -- IMPORTANT: Each extraIngress can only handle a single backend service. If you need multiple backends,
+# -- create separate extraIngresses entries for each backend service.
+extraIngresses:
+  # -- Example standalone Ingress with a single backend
+  example-ingress:
+    # -- Ingress Name - will always be prefixed with release name
+    # -- For example, if name: "ingress" and releaseName: "myapp", the Ingress will be named "myapp-ingress"
+    # -- If name is not specified it will take the key (example-ingress) prefixed with release name
+    name: ""
+    # -- Enable or disable this Ingress
+    enabled: false
+    # -- IngressClass to be used
+    className: "nginx"
+    # -- Annotations for the Ingress resource
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    # -- Default path type for the ingress
+    pathType: Prefix
+    # -- Host configuration for the Ingress
+    hosts:
+      - host: chart-example.local
+        paths: /
+        pathType: Prefix
+    # -- TLS configuration for the Ingress
+    tls: []
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+    # -- Backend service configuration - REQUIRED - each extraIngress supports only one backend
+    backend:
+      # -- Name of the service to route to (required) - will be prefixed with release name if not already
+      serviceName: "example-service"
+      # -- Port of the service to route to (defaults to 80 if not specified)
+      servicePort: 80
+
+# -- Deployment configurations
+deployments:
+  # -- Example application deployment
+  example-app:
+    # -- Enable or disable this deployment
+    enabled: false
+    # -- Custom deployment name - will always be prefixed with release name
+    # -- For example, if name: "app" and releaseName: "myapp", the Deployment will be named "myapp-app"
+    # -- If not specified, it will use the key (example-app) prefixed with release name
+    name: ""
+    # -- Labels for deployment
+    # -- These labels will be added in addition to global and default labels
+    labels: {}
+    # -- Number of replicas for this deployment
+    replicaCount: 1
+    
+    # -- Pod labels
+    podLabels: {}
+    # -- Pod annotations
+    podAnnotations: {}
+    
+    # -- Deployment strategy - overrides global setting if specified
+    deploymentStrategy:
+      # If not specified, uses global.deploymentStrategy
+      # type: RollingUpdate
+      # rollingUpdate:
+      #   maxSurge: 1
+      #   maxUnavailable: 0
+    
+    # -- Container image configuration
+    image: 
+      # -- full image repo and tag in format <repo>:<tag>
+      repoTag: nginx:stable-alpine
+      # -- Image pull policy (defaults to IfNotPresent)
+      pullPolicy: IfNotPresent
+    
+    # -- Command to run in the container (overrides the image's default entrypoint)
+    command: []
+    # Example:
+    # - /bin/sh
+    # - -c
+    
+    # -- Arguments to pass to the command (or to the image's entrypoint if command is not specified)
+    args: []
+    # Example:
+    # - --config=/etc/config/app.conf
+    # - --debug
+    
+    # -- Use common ConfigMap (from common.configMap)
+    useCommonConfigMap: false
+    
+    # -- Use common Secret (from common.secret)
+    useCommonSecret: false
+    
+    # -- Additional containers in the same pod
+    additionalContainers: []
+      # - name: sidecar1
+      #   image: fluentd:v1.14
+      #   imagePullPolicy: IfNotPresent
+      #   resources:
+      #     limits:
+      #       cpu: 100m
+      #       memory: 128Mi
+      #     requests:
+      #       cpu: 50m
+      #       memory: 64Mi
+      #   env:
+      #     - name: SIDECAR_ENV
+      #       value: "sidecar_value"
+    
+    # -- Init containers that run before app containers
+    initContainers: []
+      # - name: init-db
+      #   image: busybox:1.28
+      #   command: ['sh', '-c', 'until nslookup mysql; do echo waiting for mysql; sleep 2; done;']
+      #   resources:
+      #     limits:
+      #       cpu: 100m
+      #       memory: 128Mi
+    
+    # -- Volume configuration
+    volumes: []
+      # - name: config-volume
+      #   configMap:
+      #     name: app-config
+      # - name: data-volume
+      #   persistentVolumeClaim:
+      #     claimName: data-claim
+      # - name: secret-volume
+      #   secret:
+      #     secretName: app-secrets
+      # - name: empty-dir
+      #   emptyDir: {}
+    
+    # -- Volume mounts for the main container
+    volumeMounts: []
+      # - name: config-volume
+      #   mountPath: /etc/config
+      # - name: data-volume
+      #   mountPath: /var/data
+    
+    # -- Liveness probe configuration
+    livenessProbe:
+      # -- HTTP Get probe configuration
+      httpGet:
+        # -- Path for the HTTP probe
+        path: /
+        # -- Port for the HTTP probe
+        port: http
+      # -- Initial delay before probing
+      initialDelaySeconds: 30
+      # -- How often to perform the probe
+      periodSeconds: 10
+      # Other available options:
+      # -- Minimum consecutive failures for the probe to be considered failed
+      # failureThreshold: 3
+      # -- Minimum consecutive successes for the probe to be considered successful
+      # successThreshold: 1
+      # -- Number of seconds after which the probe times out
+      # timeoutSeconds: 1
+    
+    # -- Readiness probe configuration
+    readinessProbe:
+      # -- HTTP Get probe configuration
+      httpGet:
+        # -- Path for the HTTP probe
+        path: /
+        # -- Port for the HTTP probe
+        port: http
+      # -- Initial delay before probing
+      initialDelaySeconds: 5
+      # -- How often to perform the probe
+      periodSeconds: 10
+      # Other available options:
+      # failureThreshold: 3
+      # successThreshold: 1
+      # timeoutSeconds: 1
+    
+    # -- Startup probe configuration
+    startupProbe:
+      # -- Enable or disable startup probe
+      enabled: false
+      # -- HTTP Get probe configuration
+      httpGet:
+        # -- Path for the HTTP probe
+        path: /
+        # -- Port for the HTTP probe
+        port: http
+      # -- Number of failures before considering the startup failed
+      failureThreshold: 30
+      # -- How often to perform the probe
+      periodSeconds: 10
+    
+    # Alternative probe types examples
+    # livenessProbe:
+    #   tcpSocket:
+    #     port: 8080
+    #   initialDelaySeconds: 15
+    #   periodSeconds: 20
+    
+    # readinessProbe:
+    #   exec:
+    #     command:
+    #       - cat
+    #       - /tmp/healthy
+    #   initialDelaySeconds: 5
+    #   periodSeconds: 10
+    
+    # -- Pod resource requests and limits
+    resources:
+      # -- Resource limits
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      # -- Resource requests
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    
+    # -- Horizontal Pod Autoscaler configuration
+    autoscaling:
+      # -- Enable or disable autoscaling
+      enabled: false
+      # -- HPA name - will always be prefixed with release name
+      # -- If not specified, it will use the deployment key prefixed with release name
+      name: ""
+      # -- Minimum number of replicas
+      minReplicas: 1
+      # -- Maximum number of replicas
+      maxReplicas: 10
+      # -- Target CPU utilization percentage
+      targetCPUUtilizationPercentage: 80
+      # -- Target Memory utilization percentage
+      targetMemoryUtilizationPercentage: 80
+    
+    # -- Environment variables for the container
+    # Each item can use 'value', 'valueFrom.configMapKeyRef', or 'valueFrom.secretKeyRef'
+    env: []
+    # Examples:
+    # - name: STATIC_VAR
+    #   value: "static-value"
+    # - name: CONFIG_VAR
+    #   valueFrom:
+    #     configMapKeyRef:
+    #       name: my-config
+    #       key: my-key
+    # - name: SECRET_VAR
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: my-secret
+    #       key: my-secret-key
+    # - name: POD_NAME
+    #   valueFrom:
+    #     fieldRef:
+    #       fieldPath: metadata.name
+    
+    # -- Sources for environment variables
+    # Mount entire ConfigMaps or Secrets as environment variables
+    envFrom: []
+    # Examples:
+    # - configMapRef:
+    #     name: my-config-map
+    # - secretRef:
+    #     name: my-secret
+    
+    # -- Service configuration for the deployment
+    service:
+      # -- Enable or disable service
+      enabled: false
+      # -- Service name - will always be prefixed with release name
+      # -- For example, if name: "svc" and releaseName: "myapp", the Service will be named "myapp-svc"
+      # -- If not specified, it will use the deployment key prefixed with release name
+      name: ""
+      # -- Service annotations
+      annotations: {}
+      # -- Service type (ClusterIP, NodePort, LoadBalancer)
+      type: ClusterIP
+      # -- Port exposed by the service
+      port: 80
+      # -- Port targeted on the container
+      targetPort: 80
+      # -- Name of the port
+      # -- Additional service labels
+      labels: {}
+    
+    # -- Ingress configuration for the deployment
+    ingress:
+      # -- Enable or disable ingress
+      enabled: false
+      # -- Ingress name - will always be prefixed with release name
+      # -- If not specified, it will use the deployment key prefixed with release name
+      name: ""
+      # -- Ingress class name
+      className: "nginx"
+      # -- Ingress annotations
+      annotations: {}
+      # -- Path type (Prefix, Exact, ImplementationSpecific)
+      pathType: Prefix
+      # -- Host configuration
+      hosts:
+        - host: chart-example.local
+          paths: /
+          pathType: Prefix
+      # -- TLS configuration
+      tls:
+        - secretName: chart-example-tls
+          hosts:
+            - chart-example.local
+    
+    # -- ConfigMap configuration for the deployment
+    # If enabled, creates a dedicated ConfigMap for this deployment
+    configMap:
+      # -- Enable or disable creating a ConfigMap for this deployment
+      enabled: false
+      # -- ConfigMap name - will always be prefixed with release name
+      # -- For example, if name: "config" and releaseName: "myapp", the ConfigMap will be named "myapp-config"
+      # -- If not specified, it will use the deployment key prefixed with release name
+      name: ""
+      # -- Labels to apply to the ConfigMap
+      labels: {}
+      # -- Annotations to apply to the ConfigMap
+      annotations: {}
+      # -- Data to be included in the ConfigMap
+      data: {}
+      # Examples:
+      # config.json: |
+      #   {
+      #     "key": "value",
+      #     "log-level": "info"
+      #   }
+      # settings.conf: |
+      #   listen=8080
+      #   timeout=60
+    
+    # -- Secret configuration for the deployment
+    # If enabled, creates a dedicated Secret for this deployment
+    secret:
+      # -- Enable or disable creating a Secret for this deployment
+      enabled: false
+      # -- Secret name (defaults to deployment name if not specified)
+      name: ""
+      # -- Secret type (defaults to Opaque)
+      type: Opaque
+      # -- Labels to apply to the Secret
+      labels: {}
+      # -- Annotations to apply to the Secret
+      annotations: {}
+      # -- Data to be included in the Secret (automatically base64 encoded)
+      data: {}
+      # Examples:
+      # api-key: my-api-key
+      # db-password: password123
+      
+      # -- StringData for the Secret (not base64 encoded)
+      stringData: {}
+      # Examples:
+      # api-key: my-api-key
+      # db-password: password123

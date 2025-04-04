@@ -1,0 +1,61 @@
+{{- define "app.configmap" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "app.labels" .root | nindent 4 }}
+    {{- with .labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  {{- with .data }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}
+
+{{/* Common ConfigMap: Shared configuration across all deployments */}}
+{{- if and (hasKey .Values.common "configMap") .Values.common.configMap (hasKey .Values.common.configMap "enabled") .Values.common.configMap.enabled }}
+{{- $configName := "" }}
+{{- if .Values.common.configMap.name }}
+  {{- $configName = printf "%s-%s" .Release.Name .Values.common.configMap.name }}
+{{- else }}
+  {{- $configName = include "app.configMapName" (list . "common") }}
+{{- end }}
+{{- $context := dict "root" . "name" $configName "labels" .Values.common.configMap.labels "annotations" .Values.common.configMap.annotations "data" .Values.common.configMap.data }}
+{{- include "app.configmap" $context }}
+{{- end }}
+
+{{/* Deployment-specific ConfigMaps: Configuration for individual deployments */}}
+{{- range $name, $deployment := .Values.deployments }}
+{{- if and $deployment.enabled (hasKey $deployment "configMap") $deployment.configMap (hasKey $deployment.configMap "enabled") $deployment.configMap.enabled }}
+---
+{{- $configName := "" }}
+{{- if $deployment.configMap.name }}
+  {{- $configName = printf "%s-%s" $.Release.Name $deployment.configMap.name }}
+{{- else }}
+  {{- $configName = include "app.configMapName" (list $ $name) }}
+{{- end }}
+{{- $context := dict "root" $ "name" $configName "labels" $deployment.configMap.labels "annotations" $deployment.configMap.annotations "data" $deployment.configMap.data }}
+{{- include "app.configmap" $context }}
+{{- end }}
+{{- end }}
+
+{{/* Extra ConfigMaps: Additional configuration resources */}}
+{{- range $name, $configMap := .Values.extraConfigMaps }}
+{{- if and (hasKey $configMap "enabled") $configMap.enabled }}
+---
+{{- $configName := "" }}
+{{- if $configMap.name }}
+  {{- $configName = printf "%s-%s" $.Release.Name $configMap.name }}
+{{- else }}
+  {{- $configName = include "app.configMapName" (list $ $name) }}
+{{- end }}
+{{- $context := dict "root" $ "name" $configName "labels" $configMap.labels "annotations" $configMap.annotations "data" $configMap.data }}
+{{- include "app.configmap" $context }}
+{{- end }}
+{{- end }}

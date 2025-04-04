@@ -1,0 +1,116 @@
+{{/* Define the backend template */}}
+{{- define "app.ingressBackend" -}}
+service:
+  name: {{ .serviceName }}
+  port:
+    {{- if typeIs "string" .servicePort }}
+    name: {{ .servicePort }}
+    {{- else }}
+    number: {{ .servicePort }}
+    {{- end }}
+{{- end }}
+
+{{/* Define the main ingress template */}}
+{{- define "app.ingress" -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "app.labels" .root | nindent 4 }}
+    {{- with .labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .className }}
+  ingressClassName: {{ .className }}
+  {{- end }}
+  {{- if .tls }}
+  tls:
+    {{- toYaml .tls | nindent 4 }}
+  {{- end }}
+  rules:
+  {{- range .hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+        {{- if kindIs "string" .paths }}
+          - path: {{ .paths }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              {{- include "app.ingressBackend" $.backend | nindent 14 }}
+        {{- else }}
+          {{- range .paths }}
+          - path: {{ . }}
+            pathType: {{ $.pathType | default "Prefix" }}
+            backend:
+              {{- include "app.ingressBackend" $.backend | nindent 14 }}
+          {{- end }}
+        {{- end }}
+  {{- end }}
+{{- end }}
+
+{{/* Generate deployment-specific ingresses */}}
+{{- range $name, $deployment := .Values.deployments }}
+{{- if and $deployment.enabled (hasKey $deployment "ingress") $deployment.ingress (hasKey $deployment.ingress "enabled") $deployment.ingress.enabled }}
+---
+{{- $ingressName := "" }}
+{{- if $deployment.ingress.name }}
+  {{- $ingressName = printf "%s-%s" $.Release.Name $deployment.ingress.name }}
+{{- else }}
+  {{- $ingressName = include "app.ingressName" (list $ $name) }}
+{{- end }}
+
+{{- $serviceName := "" }}
+{{- if and (hasKey $deployment "service") $deployment.service (hasKey $deployment.service "name") $deployment.service.name }}
+  {{- $serviceName = printf "%s-%s" $.Release.Name $deployment.service.name }}
+{{- else }}
+  {{- $serviceName = include "app.serviceName" (list $ $name) }}
+{{- end }}
+
+{{- $servicePort := 80 }}
+{{- if and (hasKey $deployment "service") $deployment.service }}
+{{- $servicePort = $deployment.service.port | default 80 }}
+{{- end }}
+{{- $backend := dict "serviceName" $serviceName "servicePort" $servicePort }}
+{{- $context := dict "root" $ "name" $ingressName "labels" $deployment.ingress.labels "annotations" $deployment.ingress.annotations "className" $deployment.ingress.className "tls" $deployment.ingress.tls "hosts" $deployment.ingress.hosts "backend" $backend "pathType" $deployment.ingress.pathType }}
+{{- include "app.ingress" $context }}
+{{- end }}
+{{- end }}
+
+{{/* Generate extra standalone ingresses */}}
+{{- range $name, $ingress := .Values.extraIngresses }}
+{{- if and (hasKey $ingress "enabled") $ingress.enabled }}
+---
+{{- $ingressName := "" }}
+{{- if $ingress.name }}
+  {{- $ingressName = printf "%s-%s" $.Release.Name $ingress.name }}
+{{- else }}
+  {{- $ingressName = include "app.ingressName" (list $ $name) }}
+{{- end }}
+
+{{- $backend := dict "serviceName" "" "servicePort" 80 }}
+{{- if hasKey $ingress "backend" }}
+  {{- if hasKey $ingress.backend "serviceName" }}
+    {{- if not (hasPrefix (print $.Release.Name "-") $ingress.backend.serviceName) }}
+      {{- $_ := set $backend "serviceName" (printf "%s-%s" $.Release.Name $ingress.backend.serviceName) }}
+    {{- else }}
+      {{- $_ := set $backend "serviceName" $ingress.backend.serviceName }}
+    {{- end }}
+  {{- else }}
+    {{- fail (printf "serviceName is required in backend configuration for extra ingress '%s'" $name) }}
+  {{- end }}
+  {{- if hasKey $ingress.backend "servicePort" }}
+    {{- $_ := set $backend "servicePort" $ingress.backend.servicePort }}
+  {{- end }}
+{{- else }}
+  {{- fail (printf "Backend configuration is required for extra ingress '%s'" $name) }}
+{{- end }}
+{{- $context := dict "root" $ "name" $ingressName "labels" $ingress.labels "annotations" $ingress.annotations "className" $ingress.className "tls" $ingress.tls "hosts" $ingress.hosts "backend" $backend "pathType" $ingress.pathType }}
+{{- include "app.ingress" $context }}
+{{- end }}
+{{- end }}
