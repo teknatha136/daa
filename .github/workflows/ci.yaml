@@ -95,15 +95,32 @@ jobs:
       - name: Install helm-values-schema-json
         run: go install github.com/losisin/helm-values-schema-json@latest
 
-      - name: Check schema is up to date
+      - name: Generate and update schema
         run: |
-          helm-values-schema-json -input values.yaml -output values.schema.json.new
-          if ! diff -q values.schema.json values.schema.json.new > /dev/null 2>&1; then
-            echo "Schema is out of date. Please run 'make schema' and commit the changes."
-            diff values.schema.json values.schema.json.new || true
-            exit 1
+          helm-values-schema-json -input values.yaml -output values.schema.json
+          echo "Schema generated successfully"
+          cat values.schema.json
+
+      - name: Check for schema changes
+        id: schema-diff
+        run: |
+          if git diff --quiet values.schema.json; then
+            echo "Schema is up to date"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Schema was updated"
+            echo "changed=true" >> $GITHUB_OUTPUT
+            git diff values.schema.json
           fi
-          echo "Schema is up to date"
+
+      - name: Commit schema changes
+        if: steps.schema-diff.outputs.changed == 'true' && github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add values.schema.json
+          git commit -m "chore: auto-update values.schema.json"
+          git push
 
   package:
     name: Package
