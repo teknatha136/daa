@@ -1,569 +1,126 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "daa - Deploy Any Application",
-  "description": "A generic Helm chart that can deploy any application type",
-  "type": "object",
-  "properties": {
-    "global": {
-      "type": "object",
-      "description": "Global configuration that applies across all resources",
-      "properties": {
-        "labels": {
-          "type": "object",
-          "description": "Common labels to be added to all resources",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "annotations": {
-          "type": "object",
-          "description": "Common annotations to be added to all resources",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "imagePullSecrets": {
-          "type": "object",
-          "description": "Image pull secrets configuration",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "description": "Enable or disable the use of image pull secrets"
-            },
-            "secrets": {
-              "type": "array",
-              "description": "List of image pull secret names",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "deploymentStrategy": {
-          "type": "object",
-          "description": "Global deployment strategy"
-        }
-      }
-    },
-    "common": {
-      "type": "object",
-      "description": "Common configuration for all deployments",
-      "properties": {
-        "initContainers": {
-          "type": "array",
-          "description": "Common init containers applied to all deployments",
-          "items": {
-            "type": "object"
-          }
-        },
-        "additionalContainers": {
-          "type": "array",
-          "description": "Common additional containers (sidecars)",
-          "items": {
-            "type": "object"
-          }
-        },
-        "configMap": {
-          "type": "object",
-          "description": "Common ConfigMap settings",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "name": {
-              "type": "string"
-            },
-            "labels": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "annotations": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "data": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "secret": {
-          "type": "object",
-          "description": "Common Secret settings",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "name": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string"
-            },
-            "labels": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "annotations": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "data": {
-              "type": "object"
-            },
-            "stringData": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "sealedSecret": {
-          "type": "object",
-          "description": "Common SealedSecret settings",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "name": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string"
-            },
-            "labels": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "annotations": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "encryptedData": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-          }
-        }
-      }
-    },
-    "deployments": {
-      "type": "object",
-      "description": "Map of deployments to create",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "Enable or disable this deployment"
-          },
-          "name": {
-            "type": "string",
-            "description": "Custom deployment name"
-          },
-          "replicaCount": {
-            "type": "integer",
-            "description": "Number of replicas"
-          },
-          "labels": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "annotations": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "image": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "common": {
             "type": "object",
             "properties": {
-              "repoTag": {
-                "type": "string",
-                "description": "Full image repository and tag"
-              },
-              "pullPolicy": {
-                "type": "string",
-                "enum": ["Always", "IfNotPresent", "Never"]
-              }
-            },
-            "required": ["repoTag"]
-          },
-          "containerName": {
-            "type": "string"
-          },
-          "command": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ports": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
+                "additionalContainers": {
+                    "type": "array"
                 },
-                "containerPort": {
-                  "type": "integer"
+                "configMap": {
+                    "type": "object",
+                    "properties": {
+                        "annotations": {
+                            "type": "object"
+                        },
+                        "data": {
+                            "type": "object"
+                        },
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "labels": {
+                            "type": "object"
+                        },
+                        "name": {
+                            "type": "string"
+                        }
+                    }
                 },
-                "protocol": {
-                  "type": "string",
-                  "enum": ["TCP", "UDP", "SCTP"]
+                "initContainers": {
+                    "type": "array"
+                },
+                "sealedSecret": {
+                    "type": "object",
+                    "properties": {
+                        "annotations": {
+                            "type": "object"
+                        },
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "encryptedData": {
+                            "type": "object"
+                        },
+                        "labels": {
+                            "type": "object"
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "type": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "secret": {
+                    "type": "object",
+                    "properties": {
+                        "annotations": {
+                            "type": "object"
+                        },
+                        "data": {
+                            "type": "object"
+                        },
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "labels": {
+                            "type": "object"
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "stringData": {
+                            "type": "object"
+                        },
+                        "type": {
+                            "type": "string"
+                        }
+                    }
                 }
-              },
-              "required": ["containerPort"]
             }
-          },
-          "env": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "envFrom": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "useCommonConfigMap": {
-            "type": "boolean"
-          },
-          "useCommonSecret": {
-            "type": "boolean"
-          },
-          "useCommonSealedSecret": {
-            "type": "boolean"
-          },
-          "useCommonInitContainers": {
-            "type": "boolean"
-          },
-          "excludeCommonInitContainers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "useCommonAdditionalContainers": {
-            "type": "boolean"
-          },
-          "excludeCommonAdditionalContainers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "initContainers": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "additionalContainers": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "resources": {
+        },
+        "deployments": {
+            "type": "object"
+        },
+        "extraConfigMaps": {
+            "type": "object"
+        },
+        "extraIngresses": {
+            "type": "object"
+        },
+        "extraSealedSecrets": {
+            "type": "object"
+        },
+        "extraSecrets": {
+            "type": "object"
+        },
+        "global": {
             "type": "object",
             "properties": {
-              "requests": {
-                "type": "object"
-              },
-              "limits": {
-                "type": "object"
-              }
-            }
-          },
-          "livenessProbe": {
-            "type": "object"
-          },
-          "readinessProbe": {
-            "type": "object"
-          },
-          "startupProbe": {
-            "type": "object"
-          },
-          "volumeMounts": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "volumes": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "podLabels": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "podAnnotations": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "nodeSelector": {
-            "type": "object"
-          },
-          "affinity": {
-            "type": "object"
-          },
-          "tolerations": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "podSecurityContext": {
-            "type": "object"
-          },
-          "securityContext": {
-            "type": "object"
-          },
-          "terminationGracePeriodSeconds": {
-            "type": "integer"
-          },
-          "deploymentStrategy": {
-            "type": "object"
-          },
-          "service": {
-            "type": "object",
-            "properties": {
-              "enabled": {
-                "type": "boolean"
-              },
-              "name": {
-                "type": "string"
-              },
-              "type": {
-                "type": "string",
-                "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"]
-              },
-              "port": {
-                "type": "integer"
-              },
-              "targetPort": {
-                "type": "integer"
-              },
-              "ports": {
-                "type": "array",
-                "items": {
-                  "type": "object"
+                "annotations": {
+                    "type": "object"
+                },
+                "deploymentStrategy": {
+                    "type": "object"
+                },
+                "imagePullSecrets": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "secrets": {
+                            "type": "array"
+                        }
+                    }
+                },
+                "labels": {
+                    "type": "object"
                 }
-              },
-              "labels": {
-                "type": "object"
-              },
-              "annotations": {
-                "type": "object"
-              }
             }
-          },
-          "ingress": {
-            "type": "object",
-            "properties": {
-              "enabled": {
-                "type": "boolean"
-              },
-              "className": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "annotations": {
-                "type": "object"
-              },
-              "hosts": {
-                "type": "array",
-                "items": {
-                  "type": "object"
-                }
-              },
-              "pathType": {
-                "type": "string",
-                "enum": ["Prefix", "Exact", "ImplementationSpecific"]
-              },
-              "tls": {
-                "type": "array",
-                "items": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "configMap": {
-            "type": "object"
-          },
-          "secret": {
-            "type": "object"
-          },
-          "sealedSecret": {
-            "type": "object"
-          }
         }
-      }
-    },
-    "extraConfigMaps": {
-      "type": "object",
-      "description": "Extra ConfigMaps not tied to deployments",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "name": {
-            "type": "string"
-          },
-          "labels": {
-            "type": "object"
-          },
-          "annotations": {
-            "type": "object"
-          },
-          "data": {
-            "type": "object"
-          }
-        }
-      }
-    },
-    "extraSecrets": {
-      "type": "object",
-      "description": "Extra Secrets not tied to deployments",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "labels": {
-            "type": "object"
-          },
-          "annotations": {
-            "type": "object"
-          },
-          "data": {
-            "type": "object"
-          },
-          "stringData": {
-            "type": "object"
-          }
-        }
-      }
-    },
-    "extraSealedSecrets": {
-      "type": "object",
-      "description": "Extra SealedSecrets not tied to deployments",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "labels": {
-            "type": "object"
-          },
-          "annotations": {
-            "type": "object"
-          },
-          "encryptedData": {
-            "type": "object"
-          }
-        }
-      }
-    },
-    "extraIngresses": {
-      "type": "object",
-      "description": "Extra Ingresses not tied to deployments",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "className": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "labels": {
-            "type": "object"
-          },
-          "annotations": {
-            "type": "object"
-          },
-          "backend": {
-            "type": "object",
-            "properties": {
-              "serviceName": {
-                "type": "string"
-              },
-              "servicePort": {
-                "type": "integer"
-              }
-            },
-            "required": ["serviceName"]
-          },
-          "hosts": {
-            "type": "array"
-          },
-          "pathType": {
-            "type": "string"
-          },
-          "tls": {
-            "type": "array"
-          }
-        }
-      }
     }
-  }
 }
