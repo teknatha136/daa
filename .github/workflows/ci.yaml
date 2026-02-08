@@ -42,7 +42,9 @@ jobs:
 
       - name: Install kubeconform
         run: |
-          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz | tar xz
+          LATEST=$(curl -s https://api.github.com/repos/yannh/kubeconform/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+          echo "Installing kubeconform v${LATEST}"
+          curl -sL "https://github.com/yannh/kubeconform/releases/download/v${LATEST}/kubeconform-linux-amd64.tar.gz" | tar xz
           sudo mv kubeconform /usr/local/bin/
 
       - name: Template chart
