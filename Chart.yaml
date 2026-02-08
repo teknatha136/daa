@@ -1,0 +1,19 @@
+apiVersion: v2
+name: daa
+description: Deploy Any Application - A generic Helm chart that can deploy any application type (FE, BE, workers, or combinations)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+maintainers:
+  - name: Tek Nath Acharya
+    url: https://github.com/teknatha136
+keywords:
+  - generic
+  - universal
+  - deployment
+  - frontend
+  - backend
+  - worker
+home: https://github.com/teknatha136/daa
+sources:
+  - https://github.com/teknatha136/daa

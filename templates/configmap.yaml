@@ -1,0 +1,55 @@
+{{- /* Common ConfigMap */}}
+{{- if and .Values.common .Values.common.configMap .Values.common.configMap.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "daa.configMapName" (list . (.Values.common.configMap.name | default "common")) }}
+  labels:
+    {{- include "daa.labels" . | nindent 4 }}
+    {{- with .Values.common.configMap.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annotations := dict }}
+  {{- if .Values.global.annotations }}
+  {{- $annotations = merge $annotations .Values.global.annotations }}
+  {{- end }}
+  {{- if .Values.common.configMap.annotations }}
+  {{- $annotations = merge $annotations .Values.common.configMap.annotations }}
+  {{- end }}
+  {{- if $annotations }}
+  annotations:
+    {{- toYaml $annotations | nindent 4 }}
+  {{- end }}
+data:
+  {{- toYaml .Values.common.configMap.data | nindent 2 }}
+{{- end }}
+
+{{- /* Per-deployment ConfigMaps */}}
+{{- range $deploymentKey, $deployment := .Values.deployments }}
+{{- if and $deployment.enabled $deployment.configMap $deployment.configMap.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $deployment.configMap.name | default (include "daa.configMapName" (list $ $deploymentKey)) }}
+  labels:
+    {{- include "daa.resourceLabels" (list $ $deploymentKey) | nindent 4 }}
+    {{- with $deployment.configMap.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annotations := dict }}
+  {{- if $.Values.global.annotations }}
+  {{- $annotations = merge $annotations $.Values.global.annotations }}
+  {{- end }}
+  {{- if $deployment.configMap.annotations }}
+  {{- $annotations = merge $annotations $deployment.configMap.annotations }}
+  {{- end }}
+  {{- if $annotations }}
+  annotations:
+    {{- toYaml $annotations | nindent 4 }}
+  {{- end }}
+data:
+  {{- toYaml $deployment.configMap.data | nindent 2 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,90 @@
+{{- range $ingressKey, $ingress := .Values.extraIngresses }}
+{{- if $ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $ingress.name | default (include "daa.ingressName" (list $ $ingressKey)) }}
+  labels:
+    {{- include "daa.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $ingressKey }}
+    {{- with $ingress.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annotations := dict }}
+  {{- if $.Values.global.annotations }}
+  {{- $annotations = merge $annotations $.Values.global.annotations }}
+  {{- end }}
+  {{- if $ingress.annotations }}
+  {{- $annotations = merge $annotations $ingress.annotations }}
+  {{- end }}
+  {{- if $annotations }}
+  annotations:
+    {{- toYaml $annotations | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $ingress.className }}
+  ingressClassName: {{ $ingress.className }}
+  {{- end }}
+  {{- if $ingress.tls }}
+  tls:
+    {{- range $ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- if .secretName }}
+      secretName: {{ .secretName }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range $ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- if .paths }}
+          {{- if kindIs "string" .paths }}
+          - path: {{ .paths }}
+            pathType: {{ .pathType | default $ingress.pathType | default "Prefix" }}
+            backend:
+              service:
+                {{- /* Service name - prefix with release name if not already containing a dash */}}
+                {{- $serviceName := $ingress.backend.serviceName }}
+                {{- if not (contains "-" $serviceName) }}
+                {{- $serviceName = printf "%s-%s" $.Release.Name $serviceName }}
+                {{- end }}
+                name: {{ $serviceName }}
+                port:
+                  number: {{ $ingress.backend.servicePort | default 80 }}
+          {{- else }}
+          {{- range .paths }}
+          - path: {{ .path | default "/" }}
+            pathType: {{ .pathType | default $ingress.pathType | default "Prefix" }}
+            backend:
+              service:
+                {{- $serviceName := .serviceName | default $ingress.backend.serviceName }}
+                {{- if not (contains "-" $serviceName) }}
+                {{- $serviceName = printf "%s-%s" $.Release.Name $serviceName }}
+                {{- end }}
+                name: {{ $serviceName }}
+                port:
+                  number: {{ .servicePort | default $ingress.backend.servicePort | default 80 }}
+          {{- end }}
+          {{- end }}
+          {{- else }}
+          - path: /
+            pathType: {{ .pathType | default $ingress.pathType | default "Prefix" }}
+            backend:
+              service:
+                {{- $serviceName := $ingress.backend.serviceName }}
+                {{- if not (contains "-" $serviceName) }}
+                {{- $serviceName = printf "%s-%s" $.Release.Name $serviceName }}
+                {{- end }}
+                name: {{ $serviceName }}
+                port:
+                  number: {{ $ingress.backend.servicePort | default 80 }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

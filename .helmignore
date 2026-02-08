@@ -1,0 +1,29 @@
+# Patterns to ignore when building packages.
+# This supports shell glob matching, relative path matching, and
+# temporary file patterns.
+
+.DS_Store
+.git/
+.gitignore
+.github/
+.vscode/
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+
+# CI and development files
+ci/
+Makefile
+README.md
+CHANGELOG.md
+LICENSE
+
+# IDE directories
+.idea/
+*.iml
+
+# Test files
+tests/
+*_test.yaml

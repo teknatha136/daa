@@ -1,0 +1,576 @@
+# =============================================================================
+# daa - Deploy Any Application
+# =============================================================================
+# A generic Helm chart that can deploy any application type including:
+# - Frontend only (websites, SPAs)
+# - Backend only (APIs, services)
+# - Backend + Frontend combinations
+# - Workers (background processors, queue consumers)
+# - Any combination of the above
+#
+# This chart generates NO resources by default. Resources are only created
+# when explicitly enabled in a values file.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Global Configuration
+# -----------------------------------------------------------------------------
+# Settings that apply to all resources unless overridden at the resource level.
+# @schema
+# type: object
+# @schema
+global:
+  # -- Common labels to be added to all resources
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  labels: {}
+
+  # -- Common annotations to be added to all resources
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  annotations: {}
+
+  # -- Image pull secrets configuration
+  # @schema
+  # type: object
+  # @schema
+  imagePullSecrets:
+    # -- Enable or disable the use of image pull secrets
+    # @schema
+    # type: boolean
+    # @schema
+    enabled: false
+    # -- List of image pull secret names
+    # @schema
+    # type: array
+    # items:
+    #   type: string
+    # @schema
+    secrets: []
+
+  # -- Global deployment strategy - applied to all deployments unless overridden
+  # @schema
+  # type: object
+  # @schema
+  deploymentStrategy: {}
+  # Example:
+  #   type: RollingUpdate
+  #   rollingUpdate:
+  #     maxSurge: 1
+  #     maxUnavailable: 0
+
+# -----------------------------------------------------------------------------
+# Common Configuration
+# -----------------------------------------------------------------------------
+# Shared resources that can be referenced by multiple deployments.
+# Use this for environment variables, configs, or secrets shared across components.
+# @schema
+# type: object
+# @schema
+common:
+  # -- Common init containers applied to all deployments by default
+  # Deployments can opt-out using useCommonInitContainers: false
+  # or exclude specific ones using excludeCommonInitContainers: ["name"]
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  initContainers: []
+  # Example:
+  #   - name: wait-for-db
+  #     image: busybox:latest
+  #     command: ['sh', '-c', 'until nc -z db 5432; do sleep 2; done']
+
+  # -- Common additional containers (sidecars) applied to all deployments by default
+  # Deployments can opt-out using useCommonAdditionalContainers: false
+  # or exclude specific ones using excludeCommonAdditionalContainers: ["name"]
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  additionalContainers: []
+  # Example:
+  #   - name: log-shipper
+  #     image: fluent/fluent-bit:latest
+  #     volumeMounts:
+  #       - name: logs
+  #         mountPath: /var/log/app
+
+  # -- Common ConfigMap settings shared across all deployments
+  # @schema
+  # type: object
+  # @schema
+  configMap:
+    # -- Enable creating a common ConfigMap
+    # @schema
+    # type: boolean
+    # @schema
+    enabled: false
+    # -- ConfigMap name suffix (will be prefixed with release name)
+    # @schema
+    # type: string
+    # @schema
+    name: "common"
+    # -- Labels to apply to the ConfigMap
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    labels: {}
+    # -- Annotations to apply to the ConfigMap
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    annotations: {}
+    # -- Data to include in the ConfigMap
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    data: {}
+    # Example:
+    #   RAILS_ENV: "production"
+    #   LOG_LEVEL: "info"
+
+  # -- Common Secret settings shared across all deployments
+  # @schema
+  # type: object
+  # @schema
+  secret:
+    # -- Enable creating a common Secret
+    # @schema
+    # type: boolean
+    # @schema
+    enabled: false
+    # -- Secret name suffix (will be prefixed with release name)
+    # @schema
+    # type: string
+    # @schema
+    name: "common"
+    # -- Secret type (Opaque, kubernetes.io/tls, etc.)
+    # @schema
+    # type: string
+    # @schema
+    type: "Opaque"
+    # -- Labels to apply to the Secret
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    labels: {}
+    # -- Annotations to apply to the Secret
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    annotations: {}
+    # -- Data (base64 encoded)
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    data: {}
+    # -- String data (will be base64 encoded automatically)
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    stringData: {}
+
+  # -- Common SealedSecret settings (Bitnami Sealed Secrets)
+  # @schema
+  # type: object
+  # @schema
+  sealedSecret:
+    # -- Enable creating a common SealedSecret
+    # @schema
+    # type: boolean
+    # @schema
+    enabled: false
+    # -- SealedSecret name suffix (will be prefixed with release name)
+    # @schema
+    # type: string
+    # @schema
+    name: "common"
+    # -- Secret type for the decrypted secret
+    # @schema
+    # type: string
+    # @schema
+    type: "Opaque"
+    # -- Labels to apply to the SealedSecret
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    labels: {}
+    # -- Annotations to apply to the SealedSecret
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    annotations: {}
+    # -- Encrypted data (encrypted using kubeseal)
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    encryptedData: {}
+
+# -----------------------------------------------------------------------------
+# Deployments
+# -----------------------------------------------------------------------------
+# Map of deployments. Each key becomes the component name.
+# Resource names follow the pattern: RELEASE_NAME-DEPLOYMENT_KEY
+# Example: release "sws-prod" with deployment key "puma" creates "sws-prod-puma"
+# @schema
+# type: object
+# additionalProperties:
+#   type: object
+# @schema
+deployments: {}
+# Example deployment configuration with all available options:
+#
+#   puma:
+#     # -- Enable or disable this deployment
+#     enabled: true
+#
+#     # -- Custom deployment name (overrides default RELEASE_NAME-KEY pattern)
+#     # name: "custom-name"
+#
+#     # -- Number of replicas (ignored if autoscaling is enabled)
+#     replicaCount: 2
+#
+#     # -- Additional labels for the deployment
+#     labels: {}
+#
+#     # -- Annotations for the deployment
+#     annotations: {}
+#
+#     # -- Container image configuration
+#     image:
+#       # -- Full image repository and tag (e.g., "nginx:1.21" or "gcr.io/project/app:v1.0")
+#       repoTag: "myapp:latest"
+#       # -- Image pull policy (Always, IfNotPresent, Never)
+#       pullPolicy: "IfNotPresent"
+#
+#     # -- Custom container name (defaults to deployment key)
+#     # containerName: "app"
+#
+#     # -- Command to run (overrides image ENTRYPOINT)
+#     command: []
+#     # Example: ["bundle", "exec", "puma"]
+#
+#     # -- Arguments to pass to command (or image ENTRYPOINT if command not specified)
+#     args: []
+#     # Example: ["-C", "config/puma.rb"]
+#
+#     # -- Container ports
+#     ports:
+#       - name: http
+#         containerPort: 3000
+#         protocol: TCP
+#
+#     # -- Environment variables
+#     env: []
+#     # Examples:
+#     #   - name: RAILS_ENV
+#     #     value: "production"
+#     #   - name: DATABASE_URL
+#     #     valueFrom:
+#     #       secretKeyRef:
+#     #         name: db-secret
+#     #         key: url
+#
+#     # -- Additional envFrom sources (beyond common and deployment ConfigMaps/Secrets)
+#     envFrom: []
+#
+#     # -- Use common ConfigMap (inject as envFrom)
+#     useCommonConfigMap: false
+#
+#     # -- Use common Secret (inject as envFrom)
+#     useCommonSecret: false
+#
+#     # -- Use common SealedSecret (inject as envFrom)
+#     useCommonSealedSecret: false
+#
+#     # -- Include common init containers (default: true)
+#     useCommonInitContainers: true
+#
+#     # -- Exclude specific common init containers by name
+#     excludeCommonInitContainers: []
+#
+#     # -- Include common additional containers/sidecars (default: true)
+#     useCommonAdditionalContainers: true
+#
+#     # -- Exclude specific common additional containers by name
+#     excludeCommonAdditionalContainers: []
+#
+#     # -- Deployment-specific init containers
+#     initContainers: []
+#
+#     # -- Deployment-specific additional containers (sidecars)
+#     additionalContainers: []
+#
+#     # -- Resource requests and limits
+#     resources: {}
+#     # Example:
+#     #   requests:
+#     #     cpu: "100m"
+#     #     memory: "128Mi"
+#     #   limits:
+#     #     cpu: "500m"
+#     #     memory: "512Mi"
+#
+#     # -- Liveness probe (disabled by default)
+#     livenessProbe:
+#       enabled: false
+#     # Example when enabled:
+#     #   enabled: true
+#     #   httpGet:
+#     #     path: /health
+#     #     port: http
+#     #   initialDelaySeconds: 30
+#     #   periodSeconds: 10
+#
+#     # -- Readiness probe (disabled by default)
+#     readinessProbe:
+#       enabled: false
+#     # Example when enabled:
+#     #   enabled: true
+#     #   httpGet:
+#     #     path: /ready
+#     #     port: http
+#     #   initialDelaySeconds: 5
+#     #   periodSeconds: 10
+#
+#     # -- Startup probe (disabled by default)
+#     startupProbe:
+#       enabled: false
+#     # Example when enabled:
+#     #   enabled: true
+#     #   httpGet:
+#     #     path: /health
+#     #     port: http
+#     #   failureThreshold: 30
+#     #   periodSeconds: 10
+#
+#     # -- Volume mounts for the main container
+#     volumeMounts: []
+#
+#     # -- Volumes to attach to the pod
+#     volumes: []
+#
+#     # -- Pod labels
+#     podLabels: {}
+#
+#     # -- Pod annotations
+#     podAnnotations: {}
+#
+#     # -- Node selector
+#     nodeSelector: {}
+#
+#     # -- Affinity rules
+#     affinity: {}
+#
+#     # -- Tolerations
+#     tolerations: []
+#
+#     # -- Pod security context
+#     podSecurityContext: {}
+#
+#     # -- Container security context
+#     securityContext: {}
+#
+#     # -- Termination grace period in seconds
+#     terminationGracePeriodSeconds: 30
+#
+#     # -- Deployment strategy (overrides global.deploymentStrategy)
+#     deploymentStrategy: {}
+#     # Example:
+#     #   type: RollingUpdate
+#     #   rollingUpdate:
+#     #     maxSurge: 1
+#     #     maxUnavailable: 0
+#
+#     # -- Service configuration
+#     service:
+#       enabled: true
+#       # name: "custom-service-name"
+#       type: ClusterIP
+#       port: 80
+#       targetPort: 3000
+#       # For multiple ports:
+#       # ports:
+#       #   - name: http
+#       #     port: 80
+#       #     targetPort: 3000
+#       #   - name: metrics
+#       #     port: 9090
+#       #     targetPort: 9090
+#       labels: {}
+#       annotations: {}
+#
+#     # -- Ingress configuration
+#     ingress:
+#       enabled: false
+#       className: "nginx"
+#       # name: "custom-ingress-name"
+#       annotations: {}
+#       # Example nginx annotations:
+#       #   nginx.ingress.kubernetes.io/ssl-redirect: "true"
+#       hosts:
+#         - host: "app.example.com"
+#           paths: "/"
+#           # Or multiple paths:
+#           # paths:
+#           #   - path: /api
+#           #     pathType: Prefix
+#           #   - path: /
+#           #     pathType: Prefix
+#       pathType: Prefix
+#       tls: []
+#       # Example TLS:
+#       #   - secretName: app-tls
+#       #     hosts:
+#       #       - app.example.com
+#
+#     # -- Deployment-specific ConfigMap
+#     configMap:
+#       enabled: false
+#       # name: "custom-configmap-name"
+#       labels: {}
+#       annotations: {}
+#       data: {}
+#
+#     # -- Deployment-specific Secret
+#     secret:
+#       enabled: false
+#       # name: "custom-secret-name"
+#       type: "Opaque"
+#       labels: {}
+#       annotations: {}
+#       data: {}
+#       stringData: {}
+#
+#     # -- Deployment-specific SealedSecret
+#     sealedSecret:
+#       enabled: false
+#       # name: "custom-sealedsecret-name"
+#       type: "Opaque"
+#       labels: {}
+#       annotations: {}
+#       encryptedData: {}
+
+# -----------------------------------------------------------------------------
+# Extra ConfigMaps
+# -----------------------------------------------------------------------------
+# Standalone ConfigMaps not directly tied to deployments.
+# Useful for shared configuration files, nginx configs, etc.
+# @schema
+# type: object
+# additionalProperties:
+#   type: object
+# @schema
+extraConfigMaps: {}
+# Example:
+#   nginx-config:
+#     enabled: true
+#     # name: "custom-name"
+#     labels: {}
+#     annotations: {}
+#     data:
+#       nginx.conf: |
+#         server {
+#           listen 80;
+#           ...
+#         }
+
+# -----------------------------------------------------------------------------
+# Extra Secrets
+# -----------------------------------------------------------------------------
+# Standalone Secrets not directly tied to deployments.
+# @schema
+# type: object
+# additionalProperties:
+#   type: object
+# @schema
+extraSecrets: {}
+# Example:
+#   api-keys:
+#     enabled: true
+#     # name: "custom-name"
+#     type: "Opaque"
+#     labels: {}
+#     annotations: {}
+#     stringData:
+#       api-key: "super-secret-key"
+
+# -----------------------------------------------------------------------------
+# Extra SealedSecrets
+# -----------------------------------------------------------------------------
+# Standalone SealedSecrets not directly tied to deployments.
+# @schema
+# type: object
+# additionalProperties:
+#   type: object
+# @schema
+extraSealedSecrets: {}
+# Example:
+#   database-credentials:
+#     enabled: true
+#     # name: "custom-name"
+#     type: "Opaque"
+#     labels: {}
+#     annotations: {}
+#     encryptedData:
+#       password: "AgBy3i4OJSWK+PiTySYZZA9rO43..."
+
+# -----------------------------------------------------------------------------
+# Extra Ingresses
+# -----------------------------------------------------------------------------
+# Standalone Ingresses for routing to any service.
+# Useful when you need ingresses that don't map 1:1 with deployments.
+# @schema
+# type: object
+# additionalProperties:
+#   type: object
+# @schema
+extraIngresses: {}
+# Example:
+#   main-ingress:
+#     enabled: true
+#     className: "nginx"
+#     # name: "custom-name"
+#     labels: {}
+#     annotations:
+#       nginx.ingress.kubernetes.io/ssl-redirect: "true"
+#     backend:
+#       serviceName: "frontend"  # Will be prefixed with release name
+#       servicePort: 80
+#     hosts:
+#       - host: "app.example.com"
+#         paths: "/"
+#     pathType: Prefix
+#     tls:
+#       - secretName: app-tls
+#         hosts:
+#           - app.example.com

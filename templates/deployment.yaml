@@ -1,0 +1,205 @@
+{{- range $deploymentKey, $deployment := .Values.deployments }}
+{{- if $deployment.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $deployment.name | default (include "daa.deploymentName" (list $ $deploymentKey)) }}
+  labels:
+    {{- include "daa.resourceLabels" (list $ $deploymentKey) | nindent 4 }}
+    {{- with $deployment.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annotations := dict }}
+  {{- if $.Values.global.annotations }}
+  {{- $annotations = merge $annotations $.Values.global.annotations }}
+  {{- end }}
+  {{- if $deployment.annotations }}
+  {{- $annotations = merge $annotations $deployment.annotations }}
+  {{- end }}
+  {{- if $annotations }}
+  annotations:
+    {{- toYaml $annotations | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not $deployment.autoscaling }}
+  replicas: {{ $deployment.replicaCount | default 1 }}
+  {{- else if not $deployment.autoscaling.enabled }}
+  replicas: {{ $deployment.replicaCount | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "daa.resourceSelectorLabels" (list $ $deploymentKey) | nindent 6 }}
+  {{- /* Deployment strategy - use deployment-specific or global */}}
+  {{- $strategy := $deployment.deploymentStrategy | default $.Values.global.deploymentStrategy }}
+  {{- if $strategy }}
+  strategy:
+    {{- toYaml $strategy | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "daa.resourceSelectorLabels" (list $ $deploymentKey) | nindent 8 }}
+        {{- with $.Values.global.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $deployment.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- if or $.Values.global.annotations $deployment.podAnnotations }}
+      annotations:
+        {{- with $.Values.global.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $deployment.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+    spec:
+      {{- include "daa.imagePullSecrets" $ | nindent 6 }}
+      {{- /* Init containers */}}
+      {{- $initContainers := include "daa.initContainers" (list $ $deployment) }}
+      {{- if $initContainers }}
+      initContainers:
+        {{- $initContainers | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $deployment.containerName | default $deploymentKey }}
+          image: {{ $deployment.image.repoTag | quote }}
+          imagePullPolicy: {{ $deployment.image.pullPolicy | default "IfNotPresent" }}
+          {{- with $deployment.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $deployment.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if $deployment.ports }}
+          ports:
+            {{- range $deployment.ports }}
+            - name: {{ .name | default "http" }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          {{- end }}
+          {{- /* Environment variables */}}
+          {{- if $deployment.env }}
+          env:
+            {{- toYaml $deployment.env | nindent 12 }}
+          {{- end }}
+          {{- /* EnvFrom - ConfigMaps and Secrets */}}
+          {{- $envFrom := list }}
+          {{- /* Add common ConfigMap reference if enabled */}}
+          {{- if and $deployment.useCommonConfigMap $.Values.common.configMap.enabled }}
+          {{- $commonCmName := include "daa.configMapName" (list $ ($.Values.common.configMap.name | default "common")) }}
+          {{- $envFrom = append $envFrom (dict "configMapRef" (dict "name" $commonCmName)) }}
+          {{- end }}
+          {{- /* Add common Secret reference if enabled */}}
+          {{- if and $deployment.useCommonSecret $.Values.common.secret.enabled }}
+          {{- $commonSecretName := include "daa.secretName" (list $ ($.Values.common.secret.name | default "common")) }}
+          {{- $envFrom = append $envFrom (dict "secretRef" (dict "name" $commonSecretName)) }}
+          {{- end }}
+          {{- /* Add common SealedSecret reference if enabled */}}
+          {{- if and $deployment.useCommonSealedSecret $.Values.common.sealedSecret.enabled }}
+          {{- $commonSealedSecretName := include "daa.secretName" (list $ ($.Values.common.sealedSecret.name | default "common")) }}
+          {{- $envFrom = append $envFrom (dict "secretRef" (dict "name" $commonSealedSecretName)) }}
+          {{- end }}
+          {{- /* Add deployment-specific ConfigMap reference if enabled */}}
+          {{- if and $deployment.configMap $deployment.configMap.enabled }}
+          {{- $deploymentCmName := $deployment.configMap.name | default (include "daa.configMapName" (list $ $deploymentKey)) }}
+          {{- $envFrom = append $envFrom (dict "configMapRef" (dict "name" $deploymentCmName)) }}
+          {{- end }}
+          {{- /* Add deployment-specific Secret reference if enabled */}}
+          {{- if and $deployment.secret $deployment.secret.enabled }}
+          {{- $deploymentSecretName := $deployment.secret.name | default (include "daa.secretName" (list $ $deploymentKey)) }}
+          {{- $envFrom = append $envFrom (dict "secretRef" (dict "name" $deploymentSecretName)) }}
+          {{- end }}
+          {{- /* Add deployment-specific SealedSecret reference if enabled */}}
+          {{- if and $deployment.sealedSecret $deployment.sealedSecret.enabled }}
+          {{- $deploymentSealedSecretName := $deployment.sealedSecret.name | default (include "daa.secretName" (list $ $deploymentKey)) }}
+          {{- $envFrom = append $envFrom (dict "secretRef" (dict "name" $deploymentSealedSecretName)) }}
+          {{- end }}
+          {{- /* Add any additional envFrom */}}
+          {{- if $deployment.envFrom }}
+          {{- range $deployment.envFrom }}
+          {{- $envFrom = append $envFrom . }}
+          {{- end }}
+          {{- end }}
+          {{- if $envFrom }}
+          envFrom:
+            {{- toYaml $envFrom | nindent 12 }}
+          {{- end }}
+          {{- /* Resources */}}
+          {{- with $deployment.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- /* Probes - only if explicitly configured */}}
+          {{- if $deployment.livenessProbe }}
+          {{- if $deployment.livenessProbe.enabled }}
+          livenessProbe:
+            {{- $probe := omit $deployment.livenessProbe "enabled" }}
+            {{- toYaml $probe | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- if $deployment.readinessProbe }}
+          {{- if $deployment.readinessProbe.enabled }}
+          readinessProbe:
+            {{- $probe := omit $deployment.readinessProbe "enabled" }}
+            {{- toYaml $probe | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- if $deployment.startupProbe }}
+          {{- if $deployment.startupProbe.enabled }}
+          startupProbe:
+            {{- $probe := omit $deployment.startupProbe "enabled" }}
+            {{- toYaml $probe | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- /* Volume mounts */}}
+          {{- with $deployment.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- /* Security context for container */}}
+          {{- with $deployment.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- /* Additional containers (sidecars) */}}
+        {{- $additionalContainers := include "daa.additionalContainers" (list $ $deployment) }}
+        {{- if $additionalContainers }}
+        {{- $additionalContainers | nindent 8 }}
+        {{- end }}
+      {{- /* Volumes */}}
+      {{- with $deployment.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* Node selector */}}
+      {{- with $deployment.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* Affinity */}}
+      {{- with $deployment.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* Tolerations */}}
+      {{- with $deployment.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* Pod security context */}}
+      {{- with $deployment.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* Termination grace period */}}
+      {{- if $deployment.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ $deployment.terminationGracePeriodSeconds }}
+      {{- end }}
+{{- end }}
+{{- end }}

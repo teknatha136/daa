@@ -1,0 +1,80 @@
+{{- range $deploymentKey, $deployment := .Values.deployments }}
+{{- if and $deployment.enabled $deployment.ingress $deployment.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $deployment.ingress.name | default (include "daa.ingressName" (list $ $deploymentKey)) }}
+  labels:
+    {{- include "daa.resourceLabels" (list $ $deploymentKey) | nindent 4 }}
+    {{- with $deployment.ingress.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annotations := dict }}
+  {{- if $.Values.global.annotations }}
+  {{- $annotations = merge $annotations $.Values.global.annotations }}
+  {{- end }}
+  {{- if $deployment.ingress.annotations }}
+  {{- $annotations = merge $annotations $deployment.ingress.annotations }}
+  {{- end }}
+  {{- if $annotations }}
+  annotations:
+    {{- toYaml $annotations | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $deployment.ingress.className }}
+  ingressClassName: {{ $deployment.ingress.className }}
+  {{- end }}
+  {{- if $deployment.ingress.tls }}
+  tls:
+    {{- range $deployment.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- if .secretName }}
+      secretName: {{ .secretName }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range $deployment.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- if .paths }}
+          {{- if kindIs "string" .paths }}
+          - path: {{ .paths }}
+            pathType: {{ .pathType | default $deployment.ingress.pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ $deployment.service.name | default (include "daa.serviceName" (list $ $deploymentKey)) }}
+                port:
+                  number: {{ $deployment.service.port | default 80 }}
+          {{- else }}
+          {{- range .paths }}
+          - path: {{ .path | default "/" }}
+            pathType: {{ .pathType | default $deployment.ingress.pathType | default "Prefix" }}
+            backend:
+              service:
+                {{- if .serviceName }}
+                name: {{ .serviceName }}
+                {{- else }}
+                name: {{ $deployment.service.name | default (include "daa.serviceName" (list $ $deploymentKey)) }}
+                {{- end }}
+                port:
+                  number: {{ .servicePort | default $deployment.service.port | default 80 }}
+          {{- end }}
+          {{- end }}
+          {{- else }}
+          - path: /
+            pathType: {{ .pathType | default $deployment.ingress.pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ $deployment.service.name | default (include "daa.serviceName" (list $ $deploymentKey)) }}
+                port:
+                  number: {{ $deployment.service.port | default 80 }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

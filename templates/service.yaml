@@ -1,0 +1,62 @@
+{{- range $deploymentKey, $deployment := .Values.deployments }}
+{{- if and $deployment.enabled $deployment.service $deployment.service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $deployment.service.name | default (include "daa.serviceName" (list $ $deploymentKey)) }}
+  labels:
+    {{- include "daa.resourceLabels" (list $ $deploymentKey) | nindent 4 }}
+    {{- with $deployment.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annotations := dict }}
+  {{- if $.Values.global.annotations }}
+  {{- $annotations = merge $annotations $.Values.global.annotations }}
+  {{- end }}
+  {{- if $deployment.service.annotations }}
+  {{- $annotations = merge $annotations $deployment.service.annotations }}
+  {{- end }}
+  {{- if $annotations }}
+  annotations:
+    {{- toYaml $annotations | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $deployment.service.type | default "ClusterIP" }}
+  {{- if and (eq $deployment.service.type "LoadBalancer") $deployment.service.loadBalancerIP }}
+  loadBalancerIP: {{ $deployment.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq $deployment.service.type "LoadBalancer") $deployment.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- toYaml $deployment.service.loadBalancerSourceRanges | nindent 4 }}
+  {{- end }}
+  {{- if $deployment.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ $deployment.service.externalTrafficPolicy }}
+  {{- end }}
+  {{- if $deployment.service.sessionAffinity }}
+  sessionAffinity: {{ $deployment.service.sessionAffinity }}
+  {{- end }}
+  selector:
+    {{- include "daa.resourceSelectorLabels" (list $ $deploymentKey) | nindent 4 }}
+  ports:
+    {{- if $deployment.service.ports }}
+    {{- range $deployment.service.ports }}
+    - name: {{ .name | default "http" }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort | default .port }}
+      protocol: {{ .protocol | default "TCP" }}
+      {{- if and (eq $deployment.service.type "NodePort") .nodePort }}
+      nodePort: {{ .nodePort }}
+      {{- end }}
+    {{- end }}
+    {{- else }}
+    - name: {{ $deployment.service.portName | default "http" }}
+      port: {{ $deployment.service.port | default 80 }}
+      targetPort: {{ $deployment.service.targetPort | default ($deployment.service.port | default 80) }}
+      protocol: {{ $deployment.service.protocol | default "TCP" }}
+      {{- if and (eq $deployment.service.type "NodePort") $deployment.service.nodePort }}
+      nodePort: {{ $deployment.service.nodePort }}
+      {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
