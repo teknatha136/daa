@@ -92,8 +92,8 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v6
-
-        
+        with:
+          cache: false
 
       - name: Install helm-values-schema-json
         run: go install github.com/losisin/helm-values-schema-json@latest
