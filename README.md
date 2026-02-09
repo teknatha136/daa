@@ -33,16 +33,6 @@ A generic, flexible Helm chart that can deploy any application type including fr
 | **Secret**       | Common + Per-component + Extra | Sensitive data (base64 or stringData)              |
 | **SealedSecret** | Common + Per-component + Extra | Bitnami Sealed Secrets for GitOps                  |
 
-### Planned Resources (Future)
-
-| Resource                | Status  | Description                          |
-| ----------------------- | ------- | ------------------------------------ |
-| HorizontalPodAutoscaler | Planned | Auto-scaling based on CPU/memory     |
-| PodDisruptionBudget     | Planned | High availability during disruptions |
-| ServiceAccount          | Planned | RBAC and pod identity                |
-| NetworkPolicy           | Planned | Network segmentation                 |
-| PersistentVolumeClaim   | Planned | Persistent storage                   |
-
 ## Installation
 
 ```bash
@@ -176,35 +166,7 @@ common:
 ```
 
 ### Deployment Options
-
-Each deployment supports:
-
-| Option             | Description                           |
-| ------------------ | ------------------------------------- |
-| `enabled`          | Enable/disable the deployment         |
-| `name`             | Override the default name             |
-| `replicaCount`     | Number of replicas                    |
-| `image.repoTag`    | Container image with tag              |
-| `image.pullPolicy` | Always, IfNotPresent, Never           |
-| `command`          | Override container command            |
-| `args`             | Arguments for the command             |
-| `ports`            | Container ports                       |
-| `env`              | Environment variables                 |
-| `envFrom`          | Additional envFrom sources            |
-| `resources`        | CPU/memory requests and limits        |
-| `livenessProbe`    | Liveness probe (disabled by default)  |
-| `readinessProbe`   | Readiness probe (disabled by default) |
-| `startupProbe`     | Startup probe (disabled by default)   |
-| `volumeMounts`     | Volume mounts                         |
-| `volumes`          | Pod volumes                           |
-| `nodeSelector`     | Node selection constraints            |
-| `affinity`         | Affinity rules                        |
-| `tolerations`      | Tolerations                           |
-| `service.*`        | Service configuration                 |
-| `ingress.*`        | Ingress configuration                 |
-| `configMap.*`      | Deployment-specific ConfigMap         |
-| `secret.*`         | Deployment-specific Secret            |
-| `sealedSecret.*`   | Deployment-specific SealedSecret      |
+Check values.yaml file for more details.
 
 ### Common Resource Opt-Out
 
