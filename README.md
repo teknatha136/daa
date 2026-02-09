@@ -42,8 +42,12 @@ helm repo update
 
 # Install with custom values
 helm install my-app daa/daa -f values.yaml
+```
 
-# Or install from local directory
+Or install from a local clone:
+
+```bash
+git clone https://github.com/teknatha136/daa.git
 helm install my-app ./daa -f values.yaml
 ```
 
@@ -274,7 +278,7 @@ Contributions are welcome! Please:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests (`make test`)
+4. Run tests (`helm lint . && helm template test-release . -f ci/test-values.yaml`)
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
