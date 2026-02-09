@@ -228,25 +228,30 @@ extraIngresses:
 
 ### Prerequisites
 
-- Helm 3.x
-- Go 1.22+ (for schema generation)
-- kubeconform (for manifest validation)
+- **Helm 3.x**
+- **helm-values-schema-json** - https://github.com/losisin/helm-values-schema-json
+- **kubeconform** - (https://github.com/yannh/kubeconform)
 
-### Install Tools
-
-```bash
-make install-tools
-```
-
-### Commands
+### Common Commands
 
 ```bash
-make help           # Show available commands
-make lint           # Lint the chart
-make template       # Render templates with test values
-make test           # Run all tests
-make schema         # Regenerate JSON schema
-make package        # Package the chart
+# Lint the chart
+helm lint .
+
+# Render templates with test values
+helm template test-release . -f ci/test-values.yaml
+
+# Render with debug output
+helm template test-release . -f ci/test-values.yaml --debug
+
+# Generate JSON schema
+helm-values-schema-json -input values.yaml -output values.schema.json
+
+# Validate rendered templates against Kubernetes schemas
+helm template test-release . -f ci/test-values.yaml | kubeconform -strict -summary -kubernetes-version 1.29.0
+
+# Package the chart
+helm package .
 ```
 
 ### Testing

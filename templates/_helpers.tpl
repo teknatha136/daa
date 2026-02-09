@@ -6,28 +6,10 @@ Expand the name of the chart.
 {{- end }}
 
 {{/*
-Create a default fully qualified app name.
-Truncated at 63 chars due to DNS naming spec limits.
-*/}}
-{{- define "daa.fullname" -}}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "daa.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
-Create a consistent resource name using release name and resource identifier.
-Usage: {{ include "daa.resourceName" (list . "component-name") }}
-*/}}
-{{- define "daa.resourceName" -}}
-{{- $root := index . 0 }}
-{{- $resourceId := index . 1 }}
-{{- printf "%s-%s" $root.Release.Name $resourceId | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -127,15 +109,6 @@ Usage: {{ include "daa.resourceSelectorLabels" (list . "component-name") }}
 app.kubernetes.io/name: {{ include "daa.name" $root }}
 app.kubernetes.io/instance: {{ $root.Release.Name }}
 app.kubernetes.io/component: {{ $component }}
-{{- end }}
-
-{{/*
-Global annotations applied to all resources.
-*/}}
-{{- define "daa.annotations" -}}
-{{- with .Values.global.annotations }}
-{{ toYaml . }}
-{{- end }}
 {{- end }}
 
 {{/*
